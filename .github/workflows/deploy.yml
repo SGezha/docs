@@ -1,41 +1,36 @@
-# https://github.com/actions/deploy-pages#usage
-name: Deploy to GitHub Pages
+name: Deploy
+
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [ main ]
+
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20.x]
+
     steps:
-      - uses: actions/checkout@v3
-      - run: corepack enable
-      - uses: actions/setup-node@v3
+      - name: Checkout main branch 🦕
+        uses: actions/checkout@v3
+
+      - name: Setup Node 📦
+        uses: actions/setup-node@v3
         with:
-          node-version: "20"
-      # Pick your own package manager and build script
-      - run: npm install
-      - run: npm run generate && touch .output/public/.nojekyll && gh-pages --dotfiles -d .output/public
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies and Build 🔥
+        run: |
+            npm install
+            npm run build
+      - name: Deploy 🚀
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          path: .output/public
-  # Deployment job
-  deploy:
-    # Add a dependency to the build job
-    needs: build
-    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
-    permissions:
-      pages: write      # to deploy to Pages
-      id-token: write   # to verify the deployment originates from an appropriate source
-    # Deploy to the github_pages environment
-    environment:
-      name: github_pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    # Specify runner + deployment step
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v1
+          folder: dist
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: gh-pages
+          clean: true
